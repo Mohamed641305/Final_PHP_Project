@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                     <div class="mb-4">
                         <input type="password" name="pass"
                                placeholder="Password"
-                               class="form-control">
+                               class="form-control hidden">
                     </div>
 
                     <button type="submit" class="btn btn-success w-100">Login</button>
