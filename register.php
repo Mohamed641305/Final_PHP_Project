@@ -49,47 +49,40 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 ?>
 
 <div class="container mt-5 pt-5">
-  <div class="row justify-content-center">
-    <div class="col-12 col-sm-10 col-md-6">
-      <div class="card shadow p-4">
+  <div class="row">
+    <div class="col-md-6 m-auto">
+      <div class="card shadow p-4 ">
 
-        <h3 class="text-center mb-4">Register Page</h3>
+        <h4 class="text-center mt-4 mb-5">Register New Account</h4>
 
-        <!-- عرض الرسائل -->
+        <!-- رسائل الخطأ -->
         <?php if (!empty($message)) { ?>
-          <div id="formMessage" class="alert alert-danger text-center">
-            <?php echo htmlspecialchars($message); ?>
-          </div>
+          <h4 class="alert alert-danger alert-dismissible fade show text-center mb-4" role="alert" id="message">
+            <?php echo $message; ?>
+          </h4>
         <?php } ?>
 
         <form method="post">
-          <div class="mb-3">
-            <input type="text" name="name"
-              value="<?php echo htmlspecialchars($name); ?>"
-              placeholder="Full Name"
-              class="form-control">
-          </div>
-          <div class="mb-3">
-            <input type="email" name="email"
-              value="<?php echo htmlspecialchars($email); ?>"
-              placeholder="E-mail"
-              class="form-control">
-          </div>
-          <div class="mb-3">
-            <input type="password" name="pass"
-              placeholder="Password"
-              class="form-control">
-          </div>
-          <div class="mb-4">
-            <input type="password" name="cpass"
-              placeholder="Confirm Password"
-              class="form-control">
-          </div>
+          <input type="text" name="name"
+            value="<?php echo htmlspecialchars($name); ?>"
+            placeholder="Full Name"
+            class="form-control mb-4">
+          <input type="email" name="email"
+            value="<?php echo htmlspecialchars($email); ?>"
+            placeholder="E-mail"
+            class="form-control mb-4">
+          <input type="password" name="pass"
+            placeholder="Password"
+            class="form-control mb-4">
+          <input type="password" name="cpass"
+            placeholder="Confirm Password"
+            class="form-control mb-5"
+            class="form-control mb-4">
 
-          <button type="submit" class="btn btn-success w-100">Register</button>
+          <input type="submit" class="btn btn-primary d-block w-100" value="Register">
         </form>
 
-        <p class="text-center mt-3">
+        <p class="text-center mt-4 mb-3">
           Already have an account? <a href="login.php">Login here</a>
         </p>
       </div>
