@@ -1,4 +1,7 @@
 <?php
+if (ob_get_level() == 0) {
+  ob_start();
+}
 session_start();
 if (isset($_SESSION['admin_login'])) {
 
@@ -94,14 +97,8 @@ if (isset($_SESSION['admin_login'])) {
       $title = $_POST['product_title'];
       $description = $_POST['comment'];
 
-      if (empty($name) && empty($title) && empty($description)) {
-        $_SESSION['error'] = "Fill All Fields.";
-      } elseif (empty($name)) {
-        $_SESSION['error'] = "Name is required.";
-      } elseif (empty($title)) {
-        $_SESSION['error'] = "Title is required.";
-      } elseif (empty($description)) {
-        $_SESSION['error'] = "Description is required.";
+      if (empty($name) || empty($title) || empty($description)) {
+        $_SESSION['error'] = "Please fill all fields.";
       } else {
         $statement = $connect->prepare("INSERT INTO comments (user_name, product_title, comment, created_at) VALUES (?, ?, ?, NOW())");
         $statement->execute([$name, $title, $description]);
@@ -146,9 +143,16 @@ if (isset($_SESSION['admin_login'])) {
   /* ================= SHOW ================= */
   if ($page == "show" && isset($_GET['id'])) {
 
+    $id = (int)$_GET['id'];
     $statement = $connect->prepare("SELECT * FROM comments WHERE id = ?");
-    $statement->execute([$_GET['id']]);
+    $statement->execute([$id]);
     $comment = $statement->fetch();
+
+    if (!$comment) {
+      $_SESSION['error'] = "Comment not found.";
+      header("Location: comments.php");
+      exit();
+    }
   ?>
 
     <div class="container my-3 py-5">
@@ -181,7 +185,7 @@ if (isset($_SESSION['admin_login'])) {
                       <td><?= htmlspecialchars($comment['comment']) ?></td>
                       <td><?= $comment['created_at'] ?></td>
                       <td>
-                        <a href="categories.php" class="btn btn-sm btn-success"><i class="fas fa-house"></i></a>
+                        <a href="comments.php" class="btn btn-sm btn-success"><i class="fas fa-home"></i></a>
                       </td>
                     </tr>
                   </tbody>
@@ -199,9 +203,16 @@ if (isset($_SESSION['admin_login'])) {
   /* ================= EDIT ================= */
   if ($page == "edit" && isset($_GET['id'])) {
 
+    $id = (int)$_GET['id'];
     $statement = $connect->prepare("SELECT * FROM comments WHERE id = ?");
-    $statement->execute([$_GET['id']]);
+    $statement->execute([$id]);
     $comment = $statement->fetch();
+
+    if (!$comment) {
+      $_SESSION['error'] = "Comment not found.";
+      header("Location: comments.php");
+      exit();
+    }
 
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
@@ -209,19 +220,13 @@ if (isset($_SESSION['admin_login'])) {
       $title = $_POST['product_title'];
       $description = $_POST['comment'];
 
-      if (empty($name) && empty($title) && empty($description)) {
-        $_SESSION['error'] = "Fill All Fields.";
-      } elseif (empty($name)) {
-        $_SESSION['error'] = "Name is required.";
-      } elseif (empty($title)) {
-        $_SESSION['error'] = "Title is required.";
-      } elseif (empty($description)) {
-        $_SESSION['error'] = "Description is required.";
+      if (empty($name) || empty($title) || empty($description)) {
+        $_SESSION['error'] = "Please fill all fields.";
       } else {
         $statement = $connect->prepare("UPDATE comments SET user_name = ?, product_title = ?, comment = ? WHERE id = ?");
-        $statement->execute([$name, $title, $description, $_GET['id']]);
+        $statement->execute([$name, $title, $description, $id]);
 
-        $_SESSION['message'] = "Updated Successfully.";
+        $_SESSION['message'] = "Updated successfully.";
         header("Location: comments.php");
         exit();
       }
@@ -261,10 +266,14 @@ if (isset($_SESSION['admin_login'])) {
 
   /* ================= DELETE ================= */
   if ($page == "delete" && isset($_GET['id'])) {
+    $id = (int)$_GET['id'];
     $statement = $connect->prepare("DELETE FROM comments WHERE id = ?");
-    $statement->execute([$_GET['id']]);
-
-    $_SESSION['message'] = "Deleted Successfully";
+    $statement->execute([$id]);
+    if ($statement->rowCount() > 0) {
+      $_SESSION['message'] = "Deleted successfully.";
+    } else {
+      $_SESSION['error'] = "Comment not found or already deleted.";
+    }
     header("Location: comments.php");
     exit();
   }

@@ -1,4 +1,7 @@
 <?php
+if (ob_get_level() == 0) {
+  ob_start();
+}
 session_start();
 
 if (isset($_SESSION['admin_login'])) {

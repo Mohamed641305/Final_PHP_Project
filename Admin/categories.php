@@ -1,4 +1,7 @@
 <?php
+if (ob_get_level() == 0) {
+  ob_start();
+}
 session_start();
 if (isset($_SESSION['admin_login'])) {
 
@@ -78,12 +81,8 @@ if (isset($_SESSION['admin_login'])) {
       $title = trim($_POST['title']);
       $description = trim($_POST['description']);
       // ❗ تركناه كما هو (حسب طلبك)
-      if (empty($title) && empty($description)) {
-        $_SESSION['error'] = "Fill All Fields.";
-      } elseif (empty($title)) {
-        $_SESSION['error'] = "Title is required.";
-      } elseif (empty($description)) {
-        $_SESSION['error'] = "Description is required.";
+      if (empty($title) || empty($description)) {
+        $_SESSION['error'] = "Please fill all fields.";
       } else {
         $statement = $connect->prepare("INSERT INTO categories (title, description, created_at) VALUES (?, ?, NOW())");
         $statement->execute([$title, $description]);
@@ -124,9 +123,16 @@ if (isset($_SESSION['admin_login'])) {
   /* ================= SHOW ================= */
   if ($page == "show" && isset($_GET['id'])) {
 
+    $id = (int)$_GET['id'];
     $statement = $connect->prepare("SELECT * FROM categories WHERE id = ?");
-    $statement->execute([$_GET['id']]);
+    $statement->execute([$id]);
     $category = $statement->fetch();
+
+    if (!$category) {
+      $_SESSION['error'] = "Category not found.";
+      header("Location: categories.php");
+      exit();
+    }
   ?>
 
     <div class="container my-3 py-5">
@@ -157,7 +163,7 @@ if (isset($_SESSION['admin_login'])) {
                       <td><?= htmlspecialchars($category['description']) ?></td>
                       <td><?= $category['created_at'] ?></td>
                       <td>
-                        <a href="categories.php" class="btn btn-sm btn-success"><i class="fas fa-house"></i></a>
+                        <a href="categories.php" class="btn btn-sm btn-success"><i class="fas fa-home"></i></a>
                       </td>
                     </tr>
                   </tbody>
@@ -175,25 +181,28 @@ if (isset($_SESSION['admin_login'])) {
   /* ================= EDIT ================= */
   if ($page == "edit" && isset($_GET['id'])) {
 
+    $id = (int)$_GET['id'];
     $statement = $connect->prepare("SELECT * FROM categories WHERE id = ?");
-    $statement->execute([$_GET['id']]);
+    $statement->execute([$id]);
     $category = $statement->fetch();
+
+    if (!$category) {
+      $_SESSION['error'] = "Category not found.";
+      header("Location: categories.php");
+      exit();
+    }
 
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
       $title = $_POST['title'];
       $description = $_POST['description'];
 
-      if (empty($title) && empty($description)) {
-        $_SESSION['error'] = "Fill All Fields.";
-      } elseif (empty($title)) {
-        $_SESSION['error'] = "Title is required.";
-      } elseif (empty($description)) {
-        $_SESSION['error'] = "Description is required.";
+      if (empty($title) || empty($description)) {
+        $_SESSION['error'] = "Please fill all fields.";
       } else {
         $statement = $connect->prepare("UPDATE categories SET title = ?, description = ? WHERE id = ?");
-        $statement->execute([$title, $description, $_GET['id']]);
-        $_SESSION['message'] = "Updated Successfully.";
+        $statement->execute([$title, $description, $id]);
+        $_SESSION['message'] = "Updated successfully.";
         header("Location: categories.php");
         exit();
       }
@@ -229,9 +238,14 @@ if (isset($_SESSION['admin_login'])) {
   /* ================= DELETE ================= */
   if ($page == "delete" && isset($_GET['id'])) {
 
+    $id = (int)$_GET['id'];
     $statement = $connect->prepare("DELETE FROM categories WHERE id = ?");
-    $statement->execute([$_GET['id']]);
-    $_SESSION['message'] = "Deleted Successfully.";
+    $statement->execute([$id]);
+    if ($statement->rowCount() > 0) {
+      $_SESSION['message'] = "Deleted successfully.";
+    } else {
+      $_SESSION['error'] = "Category not found or already deleted.";
+    }
     header("Location: categories.php");
     exit();
   }

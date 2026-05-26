@@ -1,4 +1,7 @@
 <?php
+if (ob_get_level() == 0) {
+  ob_start();
+}
 session_start();
 if (isset($_SESSION['admin_login'])) {
 
@@ -97,20 +100,13 @@ if (isset($_SESSION['admin_login'])) {
       $category = $_POST['category'];
       $price = $_POST['price'];
 
-      if (empty($title) && empty($description) && empty($category) && empty($price)) {
-        $_SESSION['error'] = "Fill All Fields.";
-      } elseif (empty($title)) {
-        $_SESSION['error'] = "Title is required.";
-      } elseif (empty($description)) {
-        $_SESSION['error'] = "Description is required.";
-      } elseif (empty($category)) {
-        $_SESSION['error'] = "Category is required.";
-      } elseif (empty($price)) {
-        $_SESSION['error'] = "Price is required.";
+      // Basic validation: require all fields
+      if (empty($title) || empty($description) || empty($category) || empty($price)) {
+        $_SESSION['error'] = "Please fill all fields.";
       } else {
-        $stmtement = $connect->prepare("INSERT INTO products (title, `description`, category_name, price) VALUES (?, ?, ?, ?)");
-        $stmtement->execute([$title, $description, $category, $price]);
-        $_SESSION['message'] = "Created Successfully.";
+        $statement = $connect->prepare("INSERT INTO products (title, `description`, category_name, price) VALUES (?, ?, ?, ?)");
+        $statement->execute([$title, $description, $category, $price]);
+        $_SESSION['message'] = "Created successfully.";
         header("Location: products.php");
         exit();
       }
@@ -149,9 +145,16 @@ if (isset($_SESSION['admin_login'])) {
   /* ================== Show ================== */
   if ($page == "show" && isset($_GET['id'])) {
 
+    $id = (int)$_GET['id'];
     $statement = $connect->prepare("SELECT * FROM products WHERE id = ?");
-    $statement->execute([$_GET['id']]);
+    $statement->execute([$id]);
     $product = $statement->fetch();
+
+    if (!$product) {
+      $_SESSION['error'] = "Product not found.";
+      header("Location: products.php");
+      exit();
+    }
   ?>
 
     <div class="container my-3 py-5">
@@ -189,7 +192,7 @@ if (isset($_SESSION['admin_login'])) {
                         <td><?= $product['created_at'] ?></td>
                         <td>
                           <a href="products.php" class="btn btn-sm btn-success">
-                            <i class="fas fa-house"></i>
+                            <i class="fas fa-home"></i>
                           </a>
                         </td>
                       </tr>
@@ -215,9 +218,16 @@ if (isset($_SESSION['admin_login'])) {
   /* ================== Edit ================== */
   if ($page == "edit" && isset($_GET['id'])) {
 
-    $stmtement = $connect->prepare("SELECT * FROM products WHERE id = ?");
-    $stmtement->execute([$_GET['id']]);
-    $product = $stmtement->fetch();
+    $id = (int)$_GET['id'];
+    $statement = $connect->prepare("SELECT * FROM products WHERE id = ?");
+    $statement->execute([$id]);
+    $product = $statement->fetch();
+
+    if (!$product) {
+      $_SESSION['error'] = "Product not found.";
+      header("Location: products.php");
+      exit();
+    }
 
     if ($_SERVER['REQUEST_METHOD'] == "POST") {
       $title = $_POST['title'];
@@ -225,20 +235,13 @@ if (isset($_SESSION['admin_login'])) {
       $category = $_POST['category'];
       $price = $_POST['price'];
 
-      if (empty($title) && empty($description) && empty($category) && empty($price)) {
-        $_SESSION['error'] = "Fill All Fields.";
-      } elseif (empty($title)) {
-        $_SESSION['error'] = "Title is required.";
-      } elseif (empty($description)) {
-        $_SESSION['error'] = "Description is required.";
-      } elseif (empty($category)) {
-        $_SESSION['error'] = "Category is required.";
-      } elseif (empty($price)) {
-        $_SESSION['error'] = "Price is required.";
+      // Require all fields
+      if (empty($title) || empty($description) || empty($category) || empty($price)) {
+        $_SESSION['error'] = "Please fill all fields.";
       } else {
-        $stmtement = $connect->prepare("UPDATE products SET title = ?, `description` = ?, category_name = ?, price = ? WHERE id = ?");
-        $stmtement->execute([$title, $description, $category, $price, $_GET['id']]);
-        $_SESSION['message'] = "Updated Successfully.";
+        $statement = $connect->prepare("UPDATE products SET title = ?, `description` = ?, category_name = ?, price = ? WHERE id = ?");
+        $statement->execute([$title, $description, $category, $price, $id]);
+        $_SESSION['message'] = "Updated successfully.";
         header("Location: products.php");
         exit();
       }
@@ -276,9 +279,14 @@ if (isset($_SESSION['admin_login'])) {
 
   /* ================== Delete ================== */
   if ($page == "delete" && isset($_GET['id'])) {
+    $id = (int)$_GET['id'];
     $statement = $connect->prepare("DELETE FROM products WHERE id = ?");
-    $statement->execute([$_GET['id']]);
-    $_SESSION['message'] = "Deleted Successfully.";
+    $statement->execute([$id]);
+    if ($statement->rowCount() > 0) {
+      $_SESSION['message'] = "Deleted successfully.";
+    } else {
+      $_SESSION['error'] = "Product not found or already deleted.";
+    }
     header("Location: products.php");
     exit();
   }

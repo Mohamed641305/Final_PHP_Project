@@ -1,7 +1,10 @@
 <?php
+if (ob_get_level() == 0) {
+    ob_start();
+}
 session_start();
-if (isset($_SESSION['admin_login'])) {
 
+if (isset($_SESSION['admin_login'])) {
 
     include 'includes/temp/init.php';
 
@@ -19,7 +22,6 @@ if (isset($_SESSION['admin_login'])) {
             <div class="row justify-content-center">
                 <div class="col-md-12">
 
-                    <!-- رسالة نجاح -->
                     <?php if (!empty($_SESSION['message'])): ?>
                         <div class="alert alert-success text-center py-2 my-3 auto-hide">
                             <?= htmlspecialchars($_SESSION['message']) ?>
@@ -111,7 +113,6 @@ if (isset($_SESSION['admin_login'])) {
             <div class="row justify-content-center">
                 <div class="col-md-6">
 
-                    <!-- رسالة خطأ -->
                     <?php if (!empty($_SESSION['error'])): ?>
                         <div class="alert alert-danger text-center py-2 my-3 auto-hide">
                             <?= htmlspecialchars($_SESSION['error']) ?>
@@ -149,10 +150,16 @@ if (isset($_SESSION['admin_login'])) {
 
     /* ================= SHOW ================= */
     if ($page == "show" && isset($_GET['id'])) {
-
+        $id = (int)$_GET['id'];
         $statement = $connect->prepare("SELECT * FROM users WHERE id = ?");
-        $statement->execute([$_GET['id']]);
+        $statement->execute([$id]);
         $user = $statement->fetch();
+
+        if (!$user) {
+            $_SESSION['error'] = "User not found.";
+            header("Location: users.php");
+            exit();
+        }
     ?>
 
         <div class="container my-3 py-5">
@@ -191,7 +198,7 @@ if (isset($_SESSION['admin_login'])) {
                                             <td><?= $user['created_at'] ?></td>
                                             <td><?= $user['updated_at'] ?></td>
                                             <td>
-                                                <a href="users.php" class="btn btn-sm btn-success"><i class="fas fa-house"></i></a>
+                                                <a href="users.php" class="btn btn-sm btn-success"><i class="fas fa-home"></i></a>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -206,46 +213,49 @@ if (isset($_SESSION['admin_login'])) {
     <?php
     }
 
-    /* ================== Edit ================== */
+    /* ================== EDIT ================== */
     if ($page === "edit" && isset($_GET['id'])) {
 
+        $id = (int)$_GET['id'];
+
         $stmt = $connect->prepare("SELECT * FROM users WHERE id=?");
-        $stmt->execute([$_GET['id']]);
+        $stmt->execute([$id]);
         $user = $stmt->fetch();
+
+        if (!$user) {
+            $_SESSION['error'] = "User not found.";
+            header("Location: users.php");
+            exit();
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $username = $_POST['username'];
-            $email = $_POST['email'];
+            $email    = $_POST['email'];
             $password = $_POST['password'];
-            $role = $_POST['role'];
-            $status = $_POST['status'];
+            $role     = $_POST['role'];
+            $status   = $_POST['status'];
 
-            if (empty($username) && empty($email) && empty($password) && empty($role) && empty($status)) {
-                $_SESSION['error'] = "Fill All Fields.";
-            } elseif (empty($username)) {
-                $_SESSION['error'] = "Username is required.";
-            } elseif (empty($email)) {
-                $_SESSION['error'] = "Email is required.";
-            } elseif (empty($password)) {
-                $_SESSION['error'] = "Password is required.";
-            } elseif (empty($role)) {
-                $_SESSION['error'] = "Role is required.";
-            } elseif (empty($status)) {
-                $_SESSION['error'] = "Status is required.";
+            if (empty($username) || empty($email) || empty($password) || $role === '' || $status === '') {
+
+                $_SESSION['error'] = "Please fill all fields.";
+
             } else {
-                $stmt = $connect->prepare("UPDATE users SET username=?, email=?, `password`=?, `role`=?, `status`=? WHERE id=?");
-                $stmt->execute([$username, $email, $password, $role, $status, $_GET['id']]);
 
-                $_SESSION['message'] = "Updated Successfully";
+                $stmt = $connect->prepare("UPDATE users SET username=?, email=?, `password`=?, `role`=?, `status`=? WHERE id=?");
+                $stmt->execute([$username, $email, $password, $role, $status, $id]);
+
+                $_SESSION['message'] = "Updated successfully";
+
                 header("Location: users.php");
                 exit();
             }
         }
     ?>
+
         <div class="container mt-5 pt-5">
             <div class="col-md-6 m-auto">
-                <!-- رسالة خطأ -->
+
                 <?php if (!empty($_SESSION['error'])): ?>
                     <div class="alert alert-danger shadow-sm rounded-3 text-center py-2 my-3 auto-hide">
                         <?= htmlspecialchars($_SESSION['error']) ?>
@@ -257,6 +267,7 @@ if (isset($_SESSION['admin_login'])) {
                     <h3 class="text-center mb-3">Edit User</h3>
 
                     <form method="POST">
+
                         <input type="text" name="username" class="form-control mb-3" value="<?= htmlspecialchars($user['username']) ?>">
                         <input type="email" name="email" class="form-control mb-3" value="<?= htmlspecialchars($user['email']) ?>">
                         <input type="text" name="password" class="form-control mb-3" value="<?= htmlspecialchars($user['password']) ?>">
@@ -272,27 +283,34 @@ if (isset($_SESSION['admin_login'])) {
                         </select>
 
                         <button class="btn btn-primary w-100">Update</button>
+
                     </form>
+
                 </div>
             </div>
         </div>
+
     <?php
     }
 
     /* ================== Delete ================== */
     if ($page === "delete" && isset($_GET['id'])) {
+        $id = (int)$_GET['id'];
         $stmt = $connect->prepare("DELETE FROM users WHERE id=?");
-        $stmt->execute([$_GET['id']]);
+        $stmt->execute([$id]);
 
-        $_SESSION['message'] = "Deleted Successfully";
+        if ($stmt->rowCount() > 0) {
+            $_SESSION['message'] = "Deleted successfully";
+        } else {
+            $_SESSION['error'] = "User not found or already deleted.";
+        }
+
         header("Location: users.php");
         exit();
     }
     ?>
 
-    <!-- سكربت موحد -->
     <script>
-        // هذا السكربت لإخفاء رسائل النجاح أو الخطأ بعد 3 ثواني
         setTimeout(() => {
             document.querySelectorAll('.auto-hide').forEach(el => {
                 el.style.display = 'none';
@@ -300,8 +318,7 @@ if (isset($_SESSION['admin_login'])) {
         }, 3000);
     </script>
 
-<?php include 'includes/temp/footer.php';
-} else {
+<?php include 'includes/temp/footer.php'; } else {
     header("Location: ../login.php");
     $_SESSION['message_login'] = "Login First";
     exit();

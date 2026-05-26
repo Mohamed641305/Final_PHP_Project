@@ -1,5 +1,7 @@
 <?php
 session_start();
+// Buffer output to avoid headers-sent issues on redirect
+if (ob_get_level() == 0) ob_start();
 include("includes/db/db.php");
 include("includes/temp/header.php");
 
@@ -10,7 +12,7 @@ $email = "";
 if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
   $name  = trim($_POST['name']);
-  $email = trim($_POST['email']);
+  $email = filter_var(trim($_POST['email']), FILTER_SANITIZE_EMAIL);
   $pass  = trim($_POST['pass']);
   $cpass = trim($_POST['cpass']);
 
@@ -36,10 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     } else {
 
 
+      // Hash password before storing
+      $hash = password_hash($pass, PASSWORD_DEFAULT);
       $stmt = $connect->prepare("INSERT INTO users (`username`, email, `password`, `role`, `status` , created_at) VALUES (?, ?, ?, 'user', '1', NOW())");
-      $stmt->execute([$name, $email, $pass]);
+      $stmt->execute([$name, $email, $hash]);
 
-      $_SESSION['message_register'] = $_SESSION['message_login'];
       $_SESSION['message_login'] = "Registration successful! You can login now.";
       header("Location: login.php");
       exit();
@@ -76,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
             class="form-control mb-4">
           <input type="password" name="cpass"
             placeholder="Confirm Password"
-            class="form-control mb-5"
             class="form-control mb-4">
 
           <input type="submit" class="btn btn-primary d-block w-100" value="Register">
@@ -93,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 <!-- JS لإخفاء الرسائل بعد 3 ثواني -->
 <script>
   setTimeout(() => {
-    const formMsg = document.getElementById('formMessage');
+    const formMsg = document.getElementById('message');
     if (formMsg) formMsg.style.display = 'none';
   }, 3000);
 </script>

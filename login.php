@@ -1,5 +1,7 @@
 <?php
 session_start();
+// Buffer output to avoid "headers already sent" when redirecting
+if (ob_get_level() == 0) ob_start();
 include("includes/db/db.php");
 include("includes/temp/header.php");
 
@@ -8,7 +10,7 @@ $email = "";
 
 if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
-  $email = $_POST['email'];
+  $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
   $pass  = $_POST['pass'];
 
   /* ========================= VALIDATION ========================= */
@@ -47,9 +49,20 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
       $result = $statement->fetch();
 
-      // الباسورد غلط
-      if ($pass != $result['password']) {
+      // تحقق كلمة المرور مع دعم التخزين القديم (نص عادي)
+      $stored = $result['password'];
+      $passwordOk = false;
+      if (password_verify($pass, $stored)) {
+        $passwordOk = true;
+      } elseif ($pass === $stored) {
+        // Legacy plain password: احفظ مشفّرًا الآن
+        $newHash = password_hash($pass, PASSWORD_DEFAULT);
+        $upd = $connect->prepare("UPDATE users SET password = ? WHERE id = ?");
+        $upd->execute([$newHash, $result['id']]);
+        $passwordOk = true;
+      }
 
+      if (! $passwordOk) {
         $_SESSION['message_login'] = "Check Your Password";
       } else {
 
@@ -59,10 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
             $_SESSION['admin_login'] = $email;
             header("Location: Admin/dashboard.php");
+            exit();
           } else {
 
             $_SESSION['user_login'] = $email;
             header("Location: index.php");
+            exit();
           }
         } else {
 
@@ -131,3 +146,5 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
     if (loginMsg) loginMsg.style.display = 'none';
   }, 3000);
 </script>
+
+<?php /* header already included at top */ ?>
